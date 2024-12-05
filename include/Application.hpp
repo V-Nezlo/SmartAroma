@@ -164,7 +164,11 @@ public:
 			lastTempReadTime = currentTime;
 
 			if (tempSensor.readTemp()) {
-				regulator.input = tempSensor.getTemp();
+				const float temp = tempSensor.getTemp();
+				regulator.input = temp;
+				uint8_t buffer[8];
+				const int size = sprintf(buffer, "%i\r\n", static_cast<int>(temp * 100));
+				serial.write(buffer, size);
 			} else {
 				regulator.input = 0;
 				handleEvent(Events::Error);
