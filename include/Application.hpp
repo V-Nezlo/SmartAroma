@@ -28,7 +28,7 @@ public:
 
 AbstractButtonHandler *g_dev{nullptr};
 
-template<uint8_t DSPin, uint8_t LedPin>
+template<uint8_t DSPin, uint8_t LedPin, uint8_t LedsCount>
 class Application : public AbstractButtonHandler  {
 public:
 	Application(uint8_t aPwmPin, uint8_t aButtonPin, uint8_t aWhiteLed1Pin, uint8_t aWhiteLed2Pin, uint8_t aWhiteLed3Pin,
@@ -209,7 +209,7 @@ private:
 	MicroDS18B20<DSPin> tempSensor;
 	Regulator regulator;
 
-	microLED<3, LedPin, MLED_NO_CLOCK, LED_WS2812, ORDER_RBG> leds;
+	microLED<LedsCount, LedPin, MLED_NO_CLOCK, LED_WS2812, ORDER_RBG> leds;
 
 	uint32_t lastTempReadTime;
 	static constexpr uint32_t kTempReadPeriodMs{100};
@@ -275,6 +275,7 @@ private:
 	uint32_t processLed(LedEffects aEffect)
 	{
 		uint8_t red{0}, green{0}, blue{0};     // Цветовые компоненты
+		uint32_t timeout = 100;
 
 		switch (aEffect) {
 			case LedEffects::WorkingFlame: {
@@ -282,10 +283,8 @@ private:
 				red = random(200, 255);
 				green = random(50, 151);
 				blue = random(0, 51);
-				mData color{red, green, blue};
-				leds.set(1, color);
-				leds.show();
-				return random(30, 150);
+
+				timeout = random(30, 150);
 			}
 
 			case LedEffects::SleepCyan: {
@@ -302,38 +301,26 @@ private:
 
 				green = brightness;
 				blue = 255 - brightness; // Обратная пропорция к зеленому
-				mData color{red, green, blue};
-				leds.set(1, color);
-				leds.show();
-				return 50; // Обновляем каждые 50 мс
+				timeout = 50; // Обновляем каждые 50 мс
 			}
 
 			case LedEffects::ConfigGreen: {
 				// Зажигает зеленый цвет
 				green = 255;
-				mData color{red, green, blue};
-				leds.set(1, color);
-				leds.show();
-				return 200; // Постоянный цвет, медленное обновление
+				timeout = 200; // Постоянный цвет, медленное обновление
 			}
 
 			case LedEffects::ConfigYellow: {
 				// Зажигает желтый цвет (смешение красного и зеленого)
 				red = 255;
 				green = 255;
-				mData color{red, green, blue};
-				leds.set(1, color);
-				leds.show();
-				return 200;
+				timeout = 200;
 			}
 
 			case LedEffects::ConfigRed: {
 				// Зажигает красный цвет
 				red = 255;
-				mData color{red, green, blue};
-				leds.set(1, color);
-				leds.show();
-				return 200;
+				timeout = 200;
 			}
 
 			case LedEffects::Critical: {
@@ -345,14 +332,24 @@ private:
 					red = 0; // Выключаем
 				}
 				isOn = !isOn; // Переключаем состояние
-				mData color{red, green, blue};
-				leds.set(1, color);
-				leds.show();
-				return 300; // Мигание каждые 300 мс
+				timeout = 300; // Мигание каждые 300 мс
 			}
 		}
 
-		return 100; // Значение по умолчанию, если эффект не распознан
+		// Ограничение максимальной яркости
+		uint8_t clampedRed = map(red, 0, 255, 0, kMaxBrightness);
+		uint8_t clampedGreen = map(green, 0, 255, 0, kMaxBrightness);
+		uint8_t clampedBlue = map(blue, 0, 255, 0, kMaxBrightness);
+
+		mData color{clampedRed, clampedGreen, clampedBlue};
+
+		for(uint8_t i = 0; i < LedsCount; ++i) {
+			leds.set(i, color);
+		}
+
+		leds.show();
+
+		return timeout;
 	}
 
 	uint8_t getRemainingTimeInPercent()

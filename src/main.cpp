@@ -12,11 +12,13 @@ static constexpr uint8_t kWhiteLed1Pin{6};
 static constexpr uint8_t kWhiteLed2Pin{7};
 static constexpr uint8_t kWhiteLed3Pin{8};
 
+static constexpr uint8_t kLedsCount{3};
+
 void setup() {}
 void loop() {
 	SerialWrapper serial(115200);
 
-	Application<kDSPin, kLedsPin> app(kPwmPin, kButtonPin, kWhiteLed1Pin, kWhiteLed2Pin, kWhiteLed3Pin, serial);
+	Application<kDSPin, kLedsPin, kLedsCount> app(kPwmPin, kButtonPin, kWhiteLed1Pin, kWhiteLed2Pin, kWhiteLed3Pin, serial);
 	app.init();
 
 	while(true) {
